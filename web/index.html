@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MiniDanmaku 演示</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background: #0f1115; color: #e6e6e6; }
+  header { padding: 14px 20px; background: #16181d; border-bottom: 1px solid #2a2d34; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  label { font-size: 13px; color: #9aa4b2; }
+  input { background: #1c1f26; color: #e6e6e6; border: 1px solid #2a2d34; border-radius: 6px; padding: 8px 10px; font-size: 14px; }
+  button { background: #3b82f6; color: #fff; border: 0; border-radius: 6px; padding: 8px 16px; cursor: pointer; font-size: 14px; }
+  button:disabled { opacity: .45; cursor: default; }
+  #status { font-size: 13px; color: #9aa4b2; margin-left: 4px; }
+  #stage { position: relative; height: 340px; overflow: hidden; background: #000; margin: 20px 20px 12px; border-radius: 10px; }
+  .dm { position: absolute; white-space: nowrap; font-weight: 600; text-shadow: 0 1px 3px rgba(0,0,0,.85); will-change: left; }
+  #log { margin: 0 20px 20px; max-height: 160px; overflow-y: auto; font-size: 12px; color: #9aa4b2; font-family: ui-monospace, monospace; }
+</style>
+</head>
+<body>
+<header>
+  <div class="row">
+    <label>房间 <input id="room" value="100" style="width:72px"></label>
+    <label>Token <input id="token" placeholder="(可选)" style="width:140px"></label>
+    <button id="connect">连接</button>
+    <span id="status">未连接</span>
+  </div>
+</header>
+
+<div id="stage"></div>
+
+<div class="row" style="padding:0 20px">
+  <input id="content" placeholder="发一条弹幕…" maxlength="100" style="flex:1">
+  <button id="send" disabled>发送</button>
+</div>
+
+<div id="log"></div>
+
+<script>
+  const roomEl = document.getElementById('room');
+  const tokenEl = document.getElementById('token');
+  const connectBtn = document.getElementById('connect');
+  const sendBtn = document.getElementById('send');
+  const contentEl = document.getElementById('content');
+  const statusEl = document.getElementById('status');
+  const stage = document.getElementById('stage');
+  const logEl = document.getElementById('log');
+
+  let ws = null;
+  const seen = new Set(); // dedup rendered danmaku by server msgId
+
+  function logLine(msg) {
+    const div = document.createElement('div');
+    div.textContent = new Date().toLocaleTimeString() + '  ' + msg;
+    logEl.appendChild(div);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function setStatus(text, connected) {
+    statusEl.textContent = text;
+    connectBtn.disabled = connected;
+    sendBtn.disabled = !connected;
+  }
+
+  function connect() {
+    if (ws) { ws.close(); }
+    const room = roomEl.value.trim() || '100';
+    const token = tokenEl.value.trim();
+    const url = `ws://${location.host}/ws?room=${encodeURIComponent(room)}&token=${encodeURIComponent(token)}`;
+    ws = new WebSocket(url);
+    setStatus('连接中…', false);
+
+    ws.onopen = () => { setStatus(`已连接 房间 ${room}`, true); logLine('已连接'); };
+    ws.onclose = () => { setStatus('未连接', false); logLine('已断开'); };
+    ws.onerror = () => logLine('连接错误');
+    ws.onmessage = (e) => {
+      let m;
+      try { m = JSON.parse(e.data); } catch { return; }
+      switch (m.type) {
+        case 'join_ok': logLine(`欢迎 ${m.client}，当前 seq=${m.seq}`); break;
+        case 'danmaku':
+          if (seen.has(m.id)) break;
+          seen.add(m.id);
+          if (seen.size > 5000) seen.clear();
+          showDanmaku(m);
+          break;
+        case 'ack': break;
+        case 'error': logLine(`错误 ${m.code}: ${m.msg}`); break;
+        case 'pong': break;
+      }
+    };
+  }
+
+  function showDanmaku(m) {
+    const el = document.createElement('span');
+    el.className = 'dm';
+    el.textContent = m.content;
+    el.style.color = m.color || '#fff';
+    el.style.fontSize = (m.size || 24) + 'px';
+    const top = 20 + Math.random() * Math.max(1, stage.clientHeight - 60);
+    el.style.top = top + 'px';
+    stage.appendChild(el);
+
+    const width = el.offsetWidth;
+    el.style.left = stage.clientWidth + 'px';
+    const duration = 8000; // ms to cross the stage
+    const start = performance.now();
+    function tick(now) {
+      const p = (now - start) / duration;
+      if (p >= 1) { el.remove(); return; }
+      el.style.left = (stage.clientWidth - (stage.clientWidth + width) * p) + 'px';
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  function send() {
+    const content = contentEl.value.trim();
+    if (!content || !ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({
+      type: 'danmaku',
+      id: crypto.randomUUID(),
+      content: content,
+      color: '#ffffff',
+      size: 24,
+    }));
+    contentEl.value = '';
+  }
+
+  connectBtn.onclick = connect;
+  sendBtn.onclick = send;
+  contentEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
+</script>
+</body>
+</html>
