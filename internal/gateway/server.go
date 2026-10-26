@@ -13,6 +13,7 @@ import (
 	"minidanmaku/internal/config"
 	"minidanmaku/internal/hub"
 	"minidanmaku/internal/store"
+	"minidanmaku/web"
 )
 
 const maxHistoryLimit = 500
@@ -37,6 +38,7 @@ func New(cfg config.Config, h *hub.Hub, enq hub.Persister, st store.Store, log *
 		store:    st,
 		log:      log,
 		upgrader: websocket.Upgrader{
+			// 读写缓冲区各1024字节
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
 			// Phase 1: allow browser clients from any origin. Tighten this
@@ -52,6 +54,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /healthz", s.handleHealth)
 	mux.HandleFunc("GET /ws", s.handleWS)
 	mux.HandleFunc("GET /history", s.handleHistory)
+	mux.Handle("/", web.Handler()) // demo page at /
 	return mux
 }
 

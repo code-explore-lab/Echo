@@ -13,12 +13,10 @@ docker run -d -p 27017:27017 --name mongo mongo
 # 2. 启动服务
 go run ./cmd/server
 
-# 3. 浏览器打开演示页（两个标签页可互发弹幕）
-#    直接打开 web/index.html，或：
-#    go run ./cmd/server 后访问 http://localhost:8080/  （见下方「静态页」备注）
+# 3. 浏览器访问 http://localhost:8080/ 打开演示页（两个标签页可互发弹幕）
 ```
 
-> 说明：Phase 1 未把 `web/index.html` 挂进 HTTP 服务，直接用浏览器打开本地文件即可（WS 地址自动指向当前 host）。如需由服务托管，可自行加一行 `http.FileServer`。
+> 说明：演示页已用 `go:embed` 打进二进制，`/` 直接返回它；也可以直接双击打开本地 `web/index.html`（WS 地址自动指向当前 host）。
 
 ### 压测客户端
 

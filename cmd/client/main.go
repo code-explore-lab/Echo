@@ -32,14 +32,18 @@ func main() {
 	token := flag.String("token", "", "auth token")
 	conns := flag.Int("c", 1, "concurrent connections")
 	msgs := flag.Int("n", 10, "messages per connection")
+	rooms := flag.Int("rooms", 1, "spread connections across N rooms (1 = all in one)")
 	flag.Parse()
-
-	url := fmt.Sprintf("%s?room=%s&token=%s", *addr, *room, *token)
 
 	var st stats
 	var wg sync.WaitGroup
 	start := time.Now()
 	for i := 0; i < *conns; i++ {
+		roomID := *room
+		if *rooms > 1 {
+			roomID = fmt.Sprintf("%s-%d", *room, i%*rooms)
+		}
+		url := fmt.Sprintf("%s?room=%s&token=%s", *addr, roomID, *token)
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -138,6 +142,8 @@ func runOne(url string, n int, st *stats) {
 
 func randID() string {
 	b := make([]byte, 16)
+	//`crypto/rand.Read`：密码学安全随机，适合做 ID、token、密钥
 	_, _ = rand.Read(b)
+	// 16 个原始字节转成十六进制文本：**1 字节 → 2 个 hex 字符**
 	return hex.EncodeToString(b)
 }

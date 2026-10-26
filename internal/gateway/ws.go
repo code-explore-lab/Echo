@@ -29,7 +29,7 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	limiter := rate.NewLimiter(rate.Limit(s.cfg.RateLimit), s.cfg.RateBurst)
+	limiter := rate.NewLimiter(rate.Limit(s.cfg.Client.RateLimit), s.cfg.Client.RateBurst)
 	client := hub.NewClient(hub.ClientOptions{
 		Room:       room,
 		UID:        model.ShortID(),
@@ -37,12 +37,12 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 		RoomRef:    s.hub.Room(room),
 		Persist:    s.enqueuer,
 		Limiter:    limiter,
-		SendBuf:    s.cfg.ClientSendBuf,
-		PingPeriod: s.cfg.PingPeriod,
-		PongWait:   s.cfg.PongWait,
-		WriteWait:  s.cfg.WriteWait,
-		MaxMsgSize: s.cfg.MaxMsgSize,
-		MaxDrops:   s.cfg.MaxDrops,
+		SendBuf:    s.cfg.Client.SendBuf,
+		PingPeriod: s.cfg.Client.PingPeriod,
+		PongWait:   s.cfg.Client.PongWait,
+		WriteWait:  s.cfg.Client.WriteWait,
+		MaxMsgSize: s.cfg.Client.MaxMsgSize,
+		MaxDrops:   s.cfg.Client.MaxDrops,
 		Logger:     s.log,
 	})
 	client.Start()

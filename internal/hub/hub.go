@@ -30,7 +30,7 @@ type Room interface {
 type Hub struct {
 	mu        sync.RWMutex
 	rooms     map[string]Room
-	dedupSize int
+	dedupSize int // 去重缓存容量
 	dedupTTL  time.Duration
 }
 

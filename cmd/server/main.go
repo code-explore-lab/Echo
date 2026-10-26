@@ -27,18 +27,18 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	mongoStore, err := store.NewMongoStore(ctx, cfg.MongoURI, cfg.MongoDB, logger)
+	mongoStore, err := store.NewMongoStore(ctx, cfg.Mongo.URI, cfg.Mongo.DB, logger)
 	if err != nil {
 		logger.Error("failed to init mongo", "err", err)
 		os.Exit(1)
 	}
-	queue := store.NewPersistQueue(mongoStore, cfg.StoreQueue, cfg.StoreWorkers, logger)
+	queue := store.NewPersistQueue(mongoStore, cfg.Store.QueueSize, cfg.Store.Workers, logger)
 
-	h := hub.NewHub(cfg.DedupSize, cfg.DedupTTL)
+	h := hub.NewHub(cfg.Hub.DedupSize, cfg.Hub.DedupTTL)
 	gw := gateway.New(cfg, h, queue, mongoStore, logger)
 
 	srv := &http.Server{
-		Addr:              cfg.Addr,
+		Addr:              cfg.Server.Addr,
 		Handler:           gw.Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
@@ -53,7 +53,7 @@ func main() {
 		_ = mongoStore.Close(shutdownCtx)
 	}()
 
-	logger.Info("listening", "addr", cfg.Addr)
+	logger.Info("listening", "addr", cfg.Server.Addr)
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		logger.Error("server error", "err", err)
 		os.Exit(1)

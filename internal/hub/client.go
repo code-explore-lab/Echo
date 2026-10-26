@@ -116,6 +116,7 @@ func (c *Client) writePump() {
 				return
 			}
 		case <-ticker.C:
+			// 发心跳包的
 			_ = c.conn.SetWriteDeadline(time.Now().Add(c.writeWait))
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
@@ -131,6 +132,7 @@ func (c *Client) writePump() {
 // leaves the room and tears the connection down.
 func (c *Client) readPump() {
 	defer func() {
+		// 退出， 从map中移除， 退出channel
 		c.roomRef.Leave(c)
 		c.close()
 	}()
@@ -242,6 +244,7 @@ func (c *Client) trySend(msg []byte) bool {
 	case <-c.done:
 		return false
 	default:
+		// 累计丢包数 > 最大允许丢包maxDrops
 		if c.dropped.Add(1) >= c.maxDrops {
 			c.log.Warn("disconnecting slow consumer", "uid", c.uid, "room", c.room, "dropped", c.dropped.Load())
 			c.close()

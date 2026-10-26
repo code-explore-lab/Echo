@@ -9,12 +9,12 @@ import (
 // Authorization: Bearer header. An empty configured token disables auth
 // (the Phase 1 default, suitable for local development).
 func (s *Server) authenticate(r *http.Request) bool {
-	if s.cfg.AuthToken == "" {
+	if s.cfg.Server.AuthToken == "" {
 		return true
 	}
 	token := r.URL.Query().Get("token")
 	if token == "" {
 		token, _ = strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
 	}
-	return token == s.cfg.AuthToken
+	return token == s.cfg.Server.AuthToken
 }

@@ -63,8 +63,11 @@ func (q *PersistQueue) Shutdown(ctx context.Context) {
 	go func() { q.wg.Wait(); close(done) }()
 	select {
 	case <-done:
+		// 所有worker正常排空退出，优雅关闭成功
 	case <-ctx.Done():
+		// Shutdown本身超时，放弃等待，直接返回
 	}
+
 }
 
 func (q *PersistQueue) worker(ctx context.Context) {

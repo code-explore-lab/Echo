@@ -7,6 +7,7 @@ import (
 	"minidanmaku/internal/model"
 )
 
+// 带容量上限 + TTL自动多起的幂等去重缓存
 // dedupCache is a bounded, TTL-expiring map keyed by the client's idempotency
 // key. Random eviction is sufficient here: the cache only needs to bound
 // memory and remember resent ids for a short window, not enforce strict LRU.
@@ -34,6 +35,7 @@ func (d *dedupCache) Get(key string) (*model.Danmaku, bool) {
 	if !ok {
 		return nil, false
 	}
+	// 惰性过期
 	if time.Now().After(e.expiresAt) {
 		delete(d.items, key)
 		return nil, false

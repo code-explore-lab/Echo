@@ -85,6 +85,7 @@ func NewID() string {
 		// crypto/rand never fails in practice; guard defensively.
 		panic("model: cannot read random bytes: " + err.Error())
 	}
+	//1B = 2hex
 	return hex.EncodeToString(b)
 }
 
